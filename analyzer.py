@@ -7,7 +7,7 @@ from colorama import Fore, Back, Style
 
 
 # Print iterations progress
-def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█'):
+def printProgressBar(iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█'):
   """
   Call in a loop to create terminal progress bar
   @params:
@@ -53,7 +53,7 @@ class User:
 class Analyzer:
 
   # Tokenizer pattern
-  tokenizer_pattern = re.compile(r'(\[:;]\'?[\/dopDOP\(\)\|]|\(Y\)|[#]?[\w\'\-\/\&\=]+)',re.UNICODE & re.IGNORECASE)
+  split_pattern = re.compile(r'[\s+.,!?:;]+(?=\w)',re.UNICODE)
 
   # Constructor
   def __init__(self, messages):
@@ -64,7 +64,6 @@ class Analyzer:
     self.total_message_count = 0
     self.word_count = Counter()
     self.total_word_count = 0
-    self.generated_messages = []
     
   # Analyze the corpus
   def analyze(self):  
@@ -83,7 +82,7 @@ class Analyzer:
         user.message_count[message.text.lower()] += 1
       
         # Split the text in tokens
-        tokens = [match.group(1).lower() for match in self.tokenizer_pattern.finditer(message.text)]
+        tokens = [token.lower() for token in self.split_pattern.split(message.text)]
                 
         # If there are tokens
         if tokens:
@@ -125,9 +124,6 @@ class Analyzer:
     self.total_message_count = sum(self.message_count.values())
     self.total_word_count = sum(self.word_count.values())
     
-    # Generate a new corpus
-    self.generated_messages = self.generate()
-    
       
   # Generate a new corpus based on the markov chains
   def generate(self, n=30):
@@ -147,7 +143,7 @@ class Analyzer:
       text = ' '.join(user.markov_chain.walk()).capitalize()
       
       # Create a message and append it
-      message = Message(user.name,text)
+      message = Message(user.name,None,text)
       messages.append(message)
       
       # Print progress bar
@@ -187,7 +183,7 @@ class Analyzer:
     
       # Print total word count
       print((Fore.GREEN + '{}:').format(user.name))
-      print(('  ' + Fore.CYAN + '{:,}' + Fore.RESET + ' messages ({:.2f}%), ' + Fore.CYAN + '{:,}' + Fore.RESET + ' words ({:.2f}%), avg. ' + Fore.CYAN + '{:.2f}' + Fore.RESET + ' words per message').format(user.total_message_count,100 * user.total_message_count / self.total_message_count,user.total_word_count,100 * user.total_word_count / self.total_word_count,user.total_word_count / user.total_message_count))
+      print(('  ' + Fore.CYAN + '{:,}' + Fore.RESET + ' words ({:.2f}%),' + Fore.CYAN + '{:,}' + Fore.RESET + ' messages ({:.2f}%), avg. ' + Fore.CYAN + '{:.2f}' + Fore.RESET + ' words per message').format(user.total_word_count,100 * user.total_word_count / self.total_word_count,user.total_message_count,100 * user.total_message_count / self.total_message_count,user.total_word_count / user.total_message_count))
       
       # Print most common messages
       messages = ", ".join([(Style.BRIGHT + Fore.RED + '{}' + Style.RESET_ALL).format(message) for message, count in user.message_count.most_common(5)])
@@ -203,7 +199,8 @@ class Analyzer:
     print()
     
     # Generate a conversation
-    print((Back.GREEN + Fore.BLACK + 'Generated chat conversation ({} lines)').format(len(self.generated_messages)))
-    for message in self.generated_messages:
+    generated_messages = self.generate(50)
+    print((Back.GREEN + Fore.BLACK + 'Generated chat conversation ({} lines)').format(len(generated_messages)))
+    for message in generated_messages:
       print(('<' + Fore.GREEN + '{}' + Fore.RESET + '> {}').format(message.user,message.text))
     print()
